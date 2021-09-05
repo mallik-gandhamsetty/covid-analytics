@@ -1,0 +1,70 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "covidanalyticsadf"
+		},
+		"ds_ecdc_raw_csv_dl_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ds_ecdc_raw_csv_dl'"
+		},
+		"ls_asa_covidreportingsa_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_asa_covidreportingsa'"
+		},
+		"ds_ecdc_raw_csv_dl_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://covidanalyticsdl.dfs.core.windows.net"
+		},
+		"ds_ecdc_raw_csv_http_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "@{linkedService().baseurl}"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "covidanalyticsadf_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"ds_ecdc_raw_csv_dl_accountKey": {
+						"value": "[parameters('ds_ecdc_raw_csv_dl_accountKey')]"
+					},
+					"ls_asa_covidreportingsa_connectionString": {
+						"value": "[parameters('ls_asa_covidreportingsa_connectionString')]"
+					},
+					"ds_ecdc_raw_csv_dl_properties_typeProperties_url": {
+						"value": "[parameters('ds_ecdc_raw_csv_dl_properties_typeProperties_url')]"
+					},
+					"ds_ecdc_raw_csv_http_properties_typeProperties_url": {
+						"value": "[parameters('ds_ecdc_raw_csv_http_properties_typeProperties_url')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
