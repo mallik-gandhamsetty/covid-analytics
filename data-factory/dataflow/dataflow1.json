@@ -1,0 +1,30 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_ecdc_raw_csv_dl",
+						"type": "DatasetReference"
+					},
+					"name": "CasesAndDeathsSource"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "FilterEuopeData"
+				},
+				{
+					"name": "SelectRequiredColumns"
+				},
+				{
+					"name": "Pivot1"
+				}
+			],
+			"script": "source(output(\n\t\tcountry as string,\n\t\tcountry_code as string,\n\t\tcontinent as string,\n\t\tpopulation as integer,\n\t\tindicator as string,\n\t\tweekly_count as integer,\n\t\tyear_week as string,\n\t\trate_14_day as double,\n\t\tcumulative_count as integer,\n\t\tsource as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> CasesAndDeathsSource\nCasesAndDeathsSource filter(continent == \"Europe\") ~> FilterEuopeData\nFilterEuopeData select(mapColumn(\n\t\tcountry,\n\t\tcountry_code_3_digit = country_code,\n\t\tpopulation,\n\t\tindicator,\n\t\tweekly_count,\n\t\tyear_week,\n\t\tsource\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> SelectRequiredColumns\nSelectRequiredColumns pivot(groupBy(country,\n\t\tcountry_code_3_digit,\n\t\tpopulation,\n\t\tyear_week,\n\t\tsource),\n\tpivotBy(indicator, ['cases', 'deaths']),\n\tcount = sum(weekly_count),\n\tcolumnNaming: '$V_$N',\n\tlateral: true) ~> Pivot1"
+		}
+	}
+}
