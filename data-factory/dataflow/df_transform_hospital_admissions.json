@@ -10,11 +10,53 @@
 						"type": "DatasetReference"
 					},
 					"name": "HospitalAdmissionSource"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_country_ref_dl",
+						"type": "DatasetReference"
+					},
+					"name": "CountryLookup"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_dim_date_lookup_dl",
+						"type": "DatasetReference"
+					},
+					"name": "DimDateSource"
 				}
 			],
 			"sinks": [],
-			"transformations": [],
-			"script": "source(output(\n\t\tcountry as string,\n\t\tcountry_code as string,\n\t\tcontinent as string,\n\t\tpopulation as string,\n\t\tindicator as string,\n\t\tweekly_count as string,\n\t\tyear_week as string,\n\t\trate_14_day as string,\n\t\tcumulative_count as string,\n\t\tsource as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tlimit: 100,\n\tignoreNoFilesFound: false) ~> HospitalAdmissionSource"
+			"transformations": [
+				{
+					"name": "SelectRequiredColumns"
+				},
+				{
+					"name": "LookupCountry"
+				},
+				{
+					"name": "SplitDailyAndWeekly"
+				},
+				{
+					"name": "SelectReqFields"
+				},
+				{
+					"name": "DeriveECDCYearWeek"
+				},
+				{
+					"name": "AggDimDate"
+				},
+				{
+					"name": "JoinwithDimDate"
+				},
+				{
+					"name": "PivotWeekly"
+				},
+				{
+					"name": "PivotDaily"
+				}
+			],
+			"script": "source(output(\n\t\tcountry as string,\n\t\tindicator as string,\n\t\tdate as string,\n\t\tyear_week as string,\n\t\tvalue as string,\n\t\tsource as string,\n\t\turl as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tlimit: 100,\n\tignoreNoFilesFound: false) ~> HospitalAdmissionSource\nsource(output(\n\t\tcountry as string,\n\t\tcountry_code_2_digit as string,\n\t\tcountry_code_3_digit as string,\n\t\tcontinent as string,\n\t\tpopulation as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tlimit: 100,\n\tignoreNoFilesFound: false) ~> CountryLookup\nsource(output(\n\t\tdate_key as string,\n\t\tdate as string,\n\t\tyear as string,\n\t\tmonth as string,\n\t\tday as string,\n\t\tday_name as string,\n\t\tday_of_year as string,\n\t\tweek_of_month as string,\n\t\tweek_of_year as string,\n\t\tmonth_name as string,\n\t\tyear_month as string,\n\t\tyear_week as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tlimit: 100,\n\tignoreNoFilesFound: false) ~> DimDateSource\nHospitalAdmissionSource select(mapColumn(\n\t\tcountry,\n\t\tindicator,\n\t\treported_date = date,\n\t\treported_year_week = year_week,\n\t\tvalue,\n\t\tsource\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> SelectRequiredColumns\nSelectRequiredColumns, CountryLookup lookup(SelectRequiredColumns@country == CountryLookup@country,\n\tmultiple: false,\n\tpickup: 'any',\n\tbroadcast: 'auto')~> LookupCountry\nSelectReqFields split(indicator == 'Weekly new hospital admissions per 100k' || indicator == 'Weekly new ICU admissions per 100k',\n\tdisjoint: false) ~> SplitDailyAndWeekly@(Weekly, Daily)\nLookupCountry select(mapColumn(\n\t\tcountry = SelectRequiredColumns@country,\n\t\tindicator,\n\t\treported_date,\n\t\treported_year_week,\n\t\tvalue,\n\t\tsource,\n\t\tcountry = CountryLookup@country,\n\t\tcountry_code_2_digit,\n\t\tcountry_code_3_digit,\n\t\tpopulation\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SelectReqFields\nDimDateSource derive(ecdc_year_week = year + '-W' + lpad(week_of_year, 2, '0')) ~> DeriveECDCYearWeek\nDeriveECDCYearWeek aggregate(groupBy(ecdc_year_week),\n\tweek_start_date = min(date),\n\t\tweek_end_date = max(date)) ~> AggDimDate\nSplitDailyAndWeekly@Weekly, AggDimDate join(reported_year_week == ecdc_year_week,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinwithDimDate\nJoinwithDimDate pivot(groupBy(country,\n\t\tcountry_code_2_digit,\n\t\tcountry_code_3_digit,\n\t\tpopulation,\n\t\treported_year_week,\n\t\tsource),\n\tpivotBy(indicator, ['Weekly new hospital admissions per 100k', 'Weekly new ICU admissions per 100k']),\n\tcount = sum(value),\n\tcolumnNaming: '$V_$N',\n\tlateral: true) ~> PivotWeekly\nSplitDailyAndWeekly@Daily pivot(groupBy(country,\n\t\t{} = ERROR_FUNCTION(''),\n\t\t{} = ERROR_FUNCTION(''),\n\t\t{} = ERROR_FUNCTION(''),\n\t\t{} = ERROR_FUNCTION('')),\n\tcolumnNaming: '$N$V',\n\tlateral: true) ~> PivotDaily"
 		}
 	}
 }
