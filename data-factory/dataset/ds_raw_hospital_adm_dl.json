@@ -25,23 +25,11 @@
 				"type": "String"
 			},
 			{
-				"name": "country_code",
-				"type": "String"
-			},
-			{
-				"name": "continent",
-				"type": "String"
-			},
-			{
-				"name": "population",
-				"type": "String"
-			},
-			{
 				"name": "indicator",
 				"type": "String"
 			},
 			{
-				"name": "weekly_count",
+				"name": "date",
 				"type": "String"
 			},
 			{
@@ -49,15 +37,15 @@
 				"type": "String"
 			},
 			{
-				"name": "rate_14_day",
-				"type": "String"
-			},
-			{
-				"name": "cumulative_count",
+				"name": "value",
 				"type": "String"
 			},
 			{
 				"name": "source",
+				"type": "String"
+			},
+			{
+				"name": "url",
 				"type": "String"
 			}
 		]
