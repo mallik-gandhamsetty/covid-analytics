@@ -17,12 +17,7 @@
 				"typeProperties": {
 					"dataflow": {
 						"referenceName": "df_transform_cases_deaths",
-						"type": "DataFlowReference",
-						"datasetParameters": {
-							"CasesAndDeathsSource": {
-								"fileName": "cases_deaths.csv"
-							}
-						}
+						"type": "DataFlowReference"
 					},
 					"compute": {
 						"coreCount": 8,
